@@ -8,6 +8,10 @@ app.use(express.json())
 const mysql = require('mysql');
 const { isDate } = require('util/types');
 
+require('dotenv').config()
+const jwt = require('jsonwebtoken')
+
+
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
@@ -75,6 +79,20 @@ function basicAuth_validate (rows){
     if (rows[0] == undefined) {return {status: 404, error: 'User Unauthorized'}}
     
     return result = false
+}
+
+function accessToken(req, res, next){
+    const authHeader = req.headers['authorization']
+    const token = authHeader && authHeader.split(' ')[1]
+    if (token == null) return res.sendStatus(401)
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        if (err) {
+        return res.sendStatus(403)
+        }
+        req.user = user
+        next()
+    })
 }
 
 
@@ -240,19 +258,36 @@ app.get('/merchant_service/login', function (req, res) {
                                 // npm install basic-auth dulu di terminal
     let name = user.name
     let pass = user.pass
-    
+
     db.query('select * from accounts where name = ? && password = ?',[name, pass], (err, rows) =>{
         let result = basicAuth_validate(rows)
-        
+        console.log(result)        
         if(!err){
             if (result != false) {return res.json(result)}
-            else {return res.json({'Success' : 'User Authorized'})}
+            res.send('User Authenticated')
         }
         else
             return console.log(err)
     })
 })
 
+
+
+
+// GET TOKEN FOR JWT AUTHENTICATE
+app.post('/merchant_service/loginJWT', (req, res) => {
+    const username = req.body.username
+    const user = {name: username}
+
+    const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
+    res.json({accessToken: accessToken})
+
+})
+
+// ACCESS RESOURCES
+app.get('/merchant_service/loginJWT', accessToken, (req, res) => {
+    res.send('Success : Access Token Correct, USER AUTHORIZED !!!')
+})
 
 
 
