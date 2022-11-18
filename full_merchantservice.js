@@ -81,19 +81,7 @@ function basicAuth_validate (rows){
     return result = false
 }
 
-function accessToken(req, res, next){
-    const authHeader = req.headers['authorization']
-    const token = authHeader && authHeader.split(' ')[1]
-    if (token == null) return res.sendStatus(401)
 
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-        if (err) {
-        return res.sendStatus(403)
-        }
-        req.user = user
-        next()
-    })
-}
 
 
 
@@ -251,7 +239,6 @@ app.put('/merchant_service/products/:id', (req, res) =>{
 
 
 // BASIC AUTH
-// COBA GET SATU - success
 app.get('/merchant_service/login', function (req, res) {
     let auth = require('basic-auth')
     let user = auth(req)        // import api auth
@@ -288,6 +275,20 @@ app.post('/merchant_service/loginJWT', (req, res) => {
 app.get('/merchant_service/loginJWT', accessToken, (req, res) => {
     res.send('Success : Access Token Correct, USER AUTHORIZED !!!')
 })
+
+function accessToken(req, res, next){
+
+    const authHeader = req.headers['authorization']    
+    const token = authHeader && authHeader.split(' ')[1]
+    if (token == null) return res.sendStatus(401)
+    
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        if (err) {
+        return res.send({status: 403, error: 'Token Invalid'})
+        }
+        next()
+    })
+}
 
 
 
